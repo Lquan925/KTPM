@@ -1,0 +1,67 @@
+services:
+  # =========================================
+  # API Gateway (port 8000)
+  # =========================================
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - user-service
+      - order-service
+    networks:
+      - microservices-net
+    environment:
+      USER_SERVICE_URL: http://user-service:8001
+      ORDER_SERVICE_URL: http://order-service:8002
+
+  # =========================================
+  # User Service (port 8001)
+  # =========================================
+  user-service:
+    build: ./user-service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - minio
+    networks:
+      - microservices-net
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: password123
+      MINIO_BUCKET: avatars
+
+  # =========================================
+  # Order Service (port 8002)
+  # =========================================
+  order-service:
+    build: ./order-service
+    ports:
+      - "8002:8002"
+    networks:
+      - microservices-net
+
+  # =========================================
+  # MinIO - Object Storage (S3-compatible)
+  # =========================================
+  minio:
+    image: coollabsio/minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # MinIO Console UI
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  minio-data:
